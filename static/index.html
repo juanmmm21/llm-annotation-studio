@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Annotation Studio</title>
+    <!-- Cargamos tipografía Inter de Google Fonts para un aspecto moderno y pulido -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- BARRA LATERAL IZQUIERDA: Proyectos e Importación -->
+        <aside class="sidebar-left">
+            <div class="brand">
+                <h1>Annotation Studio</h1>
+                <span class="badge">Ecosistema AI</span>
+            </div>
+
+            <div class="section-title">Proyectos</div>
+            <ul id="project-list" class="project-list">
+                <!-- Se cargan dinámicamente -->
+            </ul>
+
+            <div class="sidebar-footer">
+                <button id="btn-show-import" class="btn btn-secondary">Importar Proyecto</button>
+            </div>
+        </aside>
+
+        <!-- PANEL PRINCIPAL CENTRAL: Tarea Activa y Formularios de Anotación -->
+        <main class="main-content">
+            <!-- Cabecera de Proyecto -->
+            <header class="project-header">
+                <div>
+                    <h2 id="current-project-name">Selecciona un proyecto</h2>
+                    <p id="current-project-type" class="project-meta-type"></p>
+                </div>
+                <div class="header-actions">
+                    <button id="btn-export" class="btn btn-primary" disabled>Exportar Dataset</button>
+                </div>
+            </header>
+
+            <!-- Contenedor del Anotador -->
+            <section id="annotation-workspace" class="workspace hidden">
+                <div class="task-card">
+                    <div class="task-card-header">
+                        <span>Tarea ID: <strong id="task-id-display">-</strong></span>
+                        <span class="status-indicator">Pendiente</span>
+                    </div>
+
+                    <!-- Texto original a anotar -->
+                    <div class="text-container">
+                        <h3>Texto / Prompt de Entrada:</h3>
+                        <div id="text-to-annotate" class="text-content">
+                            <!-- El texto de la tarea se inserta aquí -->
+                        </div>
+                    </div>
+
+                    <!-- MÓDULO 1: Clasificación de Texto -->
+                    <div id="module-classification" class="annotation-module hidden">
+                        <h3>Clasificación de Categoría</h3>
+                        <p class="module-help">Seleccione la etiqueta correspondiente para este texto:</p>
+                        <div id="classification-buttons" class="button-group">
+                            <!-- Botones cargados según labels de proyecto -->
+                        </div>
+                    </div>
+
+                    <!-- MÓDULO 2: RLHF (Alineación / Comparación A/B y Edición) -->
+                    <div id="module-rlhf" class="annotation-module hidden">
+                        <h3>Comparativa y Alineación de LLM (RLHF)</h3>
+                        <p class="module-help">Compare las respuestas, califique la calidad y edite la respuesta final ideal:</p>
+                        
+                        <div class="rlhf-comparison">
+                            <div class="response-box" id="box-response-a" onclick="selectResponse('A')">
+                                <div class="response-header">
+                                    <input type="radio" name="rlhf-pref" id="pref-a" value="A">
+                                    <label for="pref-a"><strong>Respuesta A</strong></label>
+                                </div>
+                                <div id="text-response-a" class="response-text"></div>
+                            </div>
+                            
+                            <div class="response-box" id="box-response-b" onclick="selectResponse('B')">
+                                <div class="response-header">
+                                    <input type="radio" name="rlhf-pref" id="pref-b" value="B">
+                                    <label for="pref-b"><strong>Respuesta B</strong></label>
+                                </div>
+                                <div id="text-response-b" class="response-text"></div>
+                            </div>
+                        </div>
+
+                        <div class="rlhf-feedback">
+                            <div class="rating-container">
+                                <span>Calificación de la mejor respuesta:</span>
+                                <div class="stars" id="star-rating">
+                                    <span data-value="1">★</span>
+                                    <span data-value="2">★</span>
+                                    <span data-value="3">★</span>
+                                    <span data-value="4">★</span>
+                                    <span data-value="5">★</span>
+                                </div>
+                            </div>
+                            
+                            <div class="editor-container">
+                                <span>Edite la respuesta para generar el Ground Truth (Respuesta Dorada):</span>
+                                <textarea id="rlhf-edited-text" placeholder="Escriba o pegue la respuesta corregida final..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MÓDULO 3: NER (Reconocimiento de Entidades) -->
+                    <div id="module-ner" class="annotation-module hidden">
+                        <h3>Reconocimiento de Entidades Nombradas (NER)</h3>
+                        <p class="module-help">Seleccione un fragmento de texto con el cursor y asigne una etiqueta de entidad:</p>
+                        
+                        <div class="ner-labels-selector">
+                            <span>Etiqueta Activa:</span>
+                            <div id="ner-label-buttons" class="labels-badge-group">
+                                <!-- Botones de etiquetas cargados dinámicamente -->
+                            </div>
+                        </div>
+
+                        <div class="ner-entities-table-container">
+                            <span>Entidades Anotadas:</span>
+                            <table class="entity-table">
+                               <thead>
+                                   <tr>
+                                       <th>Texto</th>
+                                       <th>Entidad</th>
+                                       <th>Rango (Inicio-Fin)</th>
+                                       <th>Acción</th>
+                                   </tr>
+                               </thead>
+                               <tbody id="ner-entities-list">
+                                   <!-- Se listan dinámicamente -->
+                               </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="task-actions">
+                        <button id="btn-submit-annotation" class="btn btn-success">Guardar Anotación</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Pantalla de bienvenida vacía -->
+            <section id="empty-workspace" class="workspace-empty">
+                <div class="welcome-card">
+                    <h2>Bienvenido a LLM Annotation Studio</h2>
+                    <p>Selecciona un proyecto de la barra lateral o importa un nuevo dataset para comenzar a etiquetar.</p>
+                </div>
+            </section>
+        </main>
+
+        <!-- BARRA LATERAL DERECHA: Estadísticas de Tokens e Info -->
+        <aside class="sidebar-right">
+            <div class="section-title">Estadísticas de la Tarea</div>
+            
+            <div class="stat-card">
+                <div class="stat-label">Conteo de Tokens (BPE Propio)</div>
+                <div id="stat-tokens-count" class="stat-value">-</div>
+                <div class="stat-desc">Estimado usando el tokenizador de la infraestructura.</div>
+            </div>
+
+            <div class="section-title">IDs de Tokens (Muestra BPE)</div>
+            <div id="stat-token-ids-container" class="token-ids-box">
+                <!-- Se listan dinámicamente -->
+            </div>
+        </aside>
+    </div>
+
+    <!-- MODAL: Importar Proyecto -->
+    <div id="modal-import" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Importar Nuevo Proyecto</h3>
+                <button id="btn-close-modal" class="btn-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="import-name">Nombre del Proyecto:</label>
+                    <input type="text" id="import-name" placeholder="Ej: Clasificación de Intenciones">
+                </div>
+                
+                <div class="form-group">
+                    <label for="import-task-type">Tipo de Tarea:</label>
+                    <select id="import-task-type">
+                        <option value="classification">Clasificación de Texto</option>
+                        <option value="rlhf">Alineación Comparativa (RLHF)</option>
+                        <option value="ner">Named Entity Recognition (NER)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="import-labels">Etiquetas (separadas por comas):</label>
+                    <input type="text" id="import-labels" placeholder="Ej: LOC,PER,ORG o Positivo,Negativo">
+                </div>
+
+                <div class="form-group">
+                    <label for="import-json-data">Dataset JSON de Tareas:</label>
+                    <textarea id="import-json-data" placeholder='Formato para Clasificación/NER:
+[
+  {"text": "Texto a etiquetar"}
+]
+
+Formato para RLHF:
+[
+  {"text": "Prompt del usuario", "response_a": "Respuesta A", "response_b": "Respuesta B"}
+]'></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-cancel-import" class="btn btn-secondary">Cancelar</button>
+                <button id="btn-submit-import" class="btn btn-success">Cargar Proyecto</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/app.js"></script>
+</body>
+</html>
