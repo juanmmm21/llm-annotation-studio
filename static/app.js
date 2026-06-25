@@ -494,8 +494,9 @@ async function handleSubmitAnnotation() {
 function handleExportDataset() {
     if (!currentProject) return;
     
-    // Abrimos el endpoint de exportación en una nueva ventana para su descarga directa como JSON
-    window.open(`/api/projects/${currentProject.id}/export`, "_blank");
+    // Redirigimos el navegador al endpoint de exportación; dado que devuelve
+    // un adjunto (attachment), se iniciará la descarga directa en segundo plano.
+    window.location.href = `/api/projects/${currentProject.id}/export`;
 }
 
 

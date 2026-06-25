@@ -4,7 +4,7 @@ import sys
 from datetime import datetime
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Depends
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, ForeignKey, Text, event
@@ -313,13 +313,23 @@ def export_project_dataset(project_id: int, db: Session = Depends(get_db)):
             "annotation": anno_data
         })
         
-    return {
+    # Sanitizamos el nombre del proyecto para construir un nombre de archivo seguro
+    safe_name = "".join(c for c in project.name if c.isalnum() or c in (" ", "_", "-")).strip().replace(" ", "_")
+    filename = f"dataset_{safe_name}.json"
+    
+    headers = {
+        "Content-Disposition": f'attachment; filename="{filename}"'
+    }
+    
+    content = {
         "project_id": project.id,
         "project_name": project.name,
         "task_type": project.task_type,
         "labels": project.labels.split(",") if project.labels else [],
         "dataset": exported_data
     }
+    
+    return JSONResponse(content=content, headers=headers)
 
 
 @app.post("/api/tokenize")
