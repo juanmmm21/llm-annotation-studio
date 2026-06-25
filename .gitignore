@@ -1,0 +1,16 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environments
+.venv/
+venv/
+ENV/
+env/
+
+# SQLite local database file
+*.db
+*.db-journal
+*.sqlite3
