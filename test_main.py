@@ -6,7 +6,7 @@ from sqlalchemy.pool import StaticPool
 from sqlalchemy.orm import sessionmaker
 
 # Configuramos una base de datos SQLite en memoria para tests aislados
-from main import Base, app, get_db
+from llm_annotation_studio.main import Base, app, get_db
 
 DATABASE_URL = "sqlite:///:memory:"
 engine = create_engine(
@@ -147,7 +147,7 @@ class TestLLMAnnotationStudio(unittest.TestCase):
 
     def test_tokenize_with_injected_tokenizer(self) -> None:
         """Un tokenizador conectado con `set_tokenizer` sustituye al conteo por palabras."""
-        import main as studio
+        from llm_annotation_studio import main as studio
 
         class CharTokenizer:
             def encode(self, text):

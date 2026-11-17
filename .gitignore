@@ -14,3 +14,8 @@ env/
 *.db
 *.db-journal
 *.sqlite3
+
+# Packaging
+build/
+dist/
+*.egg-info/
