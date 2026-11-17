@@ -145,5 +145,20 @@ class TestLLMAnnotationStudio(unittest.TestCase):
         self.assertIn("token_ids", data)
         self.assertTrue(data["tokens_count"] > 0)
 
+    def test_tokenize_with_injected_tokenizer(self) -> None:
+        """Un tokenizador conectado con `set_tokenizer` sustituye al conteo por palabras."""
+        import main as studio
+
+        class CharTokenizer:
+            def encode(self, text):
+                return [ord(c) for c in text]
+
+        studio.set_tokenizer(CharTokenizer())
+        try:
+            data = self.client.post("/api/tokenize", json={"text": "abc"}).json()
+        finally:
+            studio.set_tokenizer(None)
+        self.assertEqual(data, {"tokens_count": 3, "token_ids": [97, 98, 99], "fallback_used": False})
+
 if __name__ == "__main__":
     unittest.main()

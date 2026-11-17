@@ -1,6 +1,5 @@
 import json
 import os
-import sys
 from datetime import datetime
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Depends
@@ -85,19 +84,18 @@ Base.metadata.create_all(bind=engine)
 
 
 # =====================================================================
-# CONEXIÓN CON EL TOKENIZER PROPIO (Interlinking)
+# TOKENIZADOR INYECTABLE
 # =====================================================================
-# Agregamos la ruta local de bpe-tokenizer-from-scratch para reutilizar
-# nuestro tokenizador nativo en la medicion de tokens en el frontend.
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "bpe-tokenizer-from-scratch")))
+# Cualquier objeto con `encode(text) -> list[int]` sirve. El estudio no importa ningun otro
+# componente del ecosistema: quien lo despliega con el BPETokenizer de
+# bpe-tokenizer-from-scratch (el SDK `aicore` del hub) lo conecta con `set_tokenizer`.
+tokenizer_instance = None
 
-try:
-    from tokenizer import BPETokenizer
-    tokenizer_instance = BPETokenizer()
-    # Entrenamos un vocabulario base basico para que tenga las reglas por defecto
-    tokenizer_instance.train("El tokenizador propio de la infraestructura de IA.", vocab_size=260)
-except ImportError:
-    tokenizer_instance = None
+
+def set_tokenizer(tokenizer) -> None:
+    """Conecta el tokenizador que usa `/api/tokenize` (None vuelve al conteo por palabras)."""
+    global tokenizer_instance
+    tokenizer_instance = tokenizer
 
 
 # =====================================================================
@@ -343,7 +341,7 @@ def tokenize_text(req: TokenizeRequest):
         words = req.text.split()
         return {
             "tokens_count": len(words),
-            "token_ids": [hash(w) for w in words],
+            "token_ids": [],
             "fallback_used": True
         }
         
